@@ -6,16 +6,18 @@ app.use(express.json());
 
 let client = null;
 
-// 👇 ЗАМЕНИ НА СВОЙ НОМЕР MAX (с кодом страны, например +79001234567)
-const YOUR_MAX_PHONE = '+79001234567';
-
+// Функция инициализации с твоими реальными данными
 async function initClient() {
-  if (!client) {
-    client = new WebMaxClient({ name: 'session1', deviceType: 'IOS' });
-    await client.connect();
-    await client.authorizeBySMS(YOUR_MAX_PHONE);
-    console.log('✅ MAX клиент авторизован');
-  }
+  client = new WebMaxClient({
+    name: 'max_bot_session',
+    deviceType: 'IOS',
+    saveTwofaPassword: true,
+    // ВАЖНО: сюда вставь свой номер и токен вручную (получишь 1 раз)
+  });
+  
+  // Пытаемся восстановить сессию (если есть сохранённый токен)
+  await client.start();
+  console.log('✅ MAX клиент готов');
   return client;
 }
 
@@ -26,15 +28,15 @@ app.post('/send-sms', async (req, res) => {
   }
   
   try {
-    const c = await initClient();
-    await c.sendMessage({
+    if (!client) await initClient();
+    await client.sendMessage({
       chat_id: phone,
-      text: `Ваш код подтверждения MAX: ${code}`
+      text: `Ваш код подтверждения: ${code}`
     });
     res.json({ success: true });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e.message });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Ошибка отправки' });
   }
 });
 
@@ -45,4 +47,5 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
+  // initClient() раскомментируй, когда будет токен
 });
